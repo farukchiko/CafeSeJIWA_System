@@ -1,0 +1,16 @@
+Red Velvet Latte;36000
+Caramel Macchiato;35000
+Vanilla Latte;33000
+Matcha Latte;35000
+Hazelnut Coffee;32000
+Affogato;28000
+Taro Latte;33000
+Espresso;18000
+Latte;30000
+Cappuccino;28000
+Signature Chocolate;30000
+Americano;22000
+Cold Brew;27000
+Mocha;32000
+Iced Lemon Tea;20000
+Ice Lemon;10000
