@@ -13,4 +13,3 @@ Americano;22000
 Cold Brew;27000
 Mocha;32000
 Iced Lemon Tea;20000
-Ice Lemon;10000

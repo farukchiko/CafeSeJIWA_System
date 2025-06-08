@@ -1,14 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 #include <unistd.h>
 
 #define MAX 100
-
-#define CREAM   "\x1b[38;2;245;222;179m"
-#define BROWN   "\x1b[38;2;139;69;19m"
-#define DARK    "\x1b[38;2;101;67;33m"
-#define RESET   "\x1b[0m"
 
 typedef struct {
     char name[100];
@@ -18,9 +14,17 @@ typedef struct {
 Menu heap[MAX];
 int heapSize = 0;
 
+// Definisi Warna ANSI
+#define COLOR_CREAM "\x1b[38;2;245;222;179m"
+#define COLOR_BROWN "\x1b[38;2;139;69;19m"
+#define COLOR_DARK  "\x1b[38;2;101;67;33m"
+#define COLOR_RESET "\x1b[0m"
+
+// Deklarasi Fungsi (Prototypes)
 void loadFromFile();
 void saveToFile();
 void insertMenu(char name[], int price);
+void inputMenu();
 void heapifyUp(int index);
 void heapifyDown(int index);
 void displayMenu();
@@ -31,72 +35,49 @@ void clearInputBuffer();
 void pourCoffeeAnimation();
 void loadingAnimation(const char *msg);
 void printMainMenu();
+void setColor(const char *colorCode);
+void resetColor();
+void clearScreen();
+int compareIgnoreCase(const char *a, const char *b);
 
 int main() {
     int choice;
-    char name[100];
-    int price;
 
     loadFromFile();
 
     do {
-        system("clear");
+        clearScreen();
         printMainMenu();
 
         if (scanf("%d", &choice) != 1) {
-            printf(DARK "\nInput tidak valid. Masukkan angka.\n" RESET);
+            clearScreen();
+            setColor(COLOR_DARK);
+            pourCoffeeAnimation();
+            printf("\nInput tidak valid. Masukkan angka.\n");
+            resetColor();
             clearInputBuffer();
-            sleep(1);
+            usleep(1000000);
             continue;
         }
         clearInputBuffer();
 
-        system("clear");
+        clearScreen();
         pourCoffeeAnimation();
 
         switch (choice) {
-            case 1:
-                printf(BROWN "Masukkan Nama Menu : " RESET);
-                fgets(name, sizeof(name), stdin);
-                name[strcspn(name, "\n")] = 0;
-                if (strlen(name) == 0) {
-                    printf(DARK "Nama tidak boleh kosong!\n" RESET);
-                    break;
-                }
-
-                printf(BROWN "Masukkan Harga Menu : " RESET);
-                if (scanf("%d", &price) != 1 || price <= 0) {
-                    printf(DARK "Harga tidak valid!\n" RESET);
-                    clearInputBuffer();
-                    break;
-                }
-                clearInputBuffer();
-
-                insertMenu(name, price);
-                saveToFile();
-                loadingAnimation("Menyimpan");
-                break;
-
-            case 2:
-                displayMenu();
-                break;
-
-            case 3:
-                updateMenu();
-                saveToFile();
-                break;
-
-            case 4:
-                deleteMenu();
-                saveToFile();
-                break;
-
+            case 1: inputMenu(); break;
+            case 2: displayMenu(); break;
+            case 3: updateMenu(); break; // saveToFile() dipindahkan ke dalam fungsi
+            case 4: deleteMenu(); break; // saveToFile() dipindahkan ke dalam fungsi
             case 5:
-                printf(CREAM "\nTerima kasih telah menggunakan Cafe SeJIWA System ☕\n" RESET);
+                setColor(COLOR_CREAM);
+                printf("\nTerima kasih telah menggunakan Cafe SeJIWA System ☕\n");
+                resetColor();
                 break;
-
             default:
-                printf(DARK "Pilihan tidak valid!\n" RESET);
+                setColor(COLOR_DARK);
+                printf("Pilihan tidak valid!\n");
+                resetColor();
         }
 
         if (choice != 5) {
@@ -109,22 +90,84 @@ int main() {
     return 0;
 }
 
+void setColor(const char *colorCode) {
+    printf("%s", colorCode);
+}
+
+void resetColor() {
+    printf("%s", COLOR_RESET);
+}
+
+void clearScreen() {
+    system("clear");
+}
+
 void printMainMenu() {
-    printf(CREAM "╔══════════════════════════════════════════════╗\n");
-    printf("║        ☕  " RESET BROWN "Cafe SeJIWA Menu Manager" RESET CREAM "  ☕      ║\n");
+    setColor(COLOR_CREAM);
+    printf("╔══════════════════════════════════════════════╗\n");
+    printf("║        ☕  Cafe SeJIWA Menu Manager  ☕      ║\n");
     printf("╠══════════════════════════════════════════════╣\n");
-    printf("║  " RESET "1. Tambah Menu                             " CREAM " ║\n");
-    printf("║  " RESET "2. Lihat Menu                              " CREAM " ║\n");
-    printf("║  " RESET "3. Edit Menu                               " CREAM " ║\n");
-    printf("║  " RESET "4. Hapus Menu                              " CREAM " ║\n");
-    printf("║  " RESET "5. Keluar                                  " CREAM " ║\n");
-    printf("╚══════════════════════════════════════════════╝\n" RESET);
-    printf(BROWN "\nPilih menu (1-5): " RESET);
+    printf("║  1. Tambah Menu                              ║\n");
+    printf("║  2. Lihat Menu                               ║\n");
+    printf("║  3. Edit Menu                                ║\n");
+    printf("║  4. Hapus Menu                               ║\n");
+    printf("║  5. Keluar                                   ║\n");
+    printf("╚══════════════════════════════════════════════╝\n");
+    setColor(COLOR_BROWN);
+    printf("\nPilih menu (1-5): ");
+    resetColor();
+}
+
+void loadingAnimation(const char *msg) {
+    setColor(COLOR_CREAM);
+    printf("%s", msg);
+    fflush(stdout);
+    for (int i = 0; i < 3; i++) {
+        usleep(300000);
+        printf(".");
+        fflush(stdout);
+    }
+    printf("\n");
+    resetColor();
+}
+
+void pourCoffeeAnimation() {
+    const char *pour[] = {
+        "     ( (",
+        "      ) )",
+        "    ........",
+        "    |      |]",
+        "    \\      /",
+        "     `----'"
+    };
+    for (int i = 0; i < 6; i++) {
+        setColor(COLOR_CREAM);
+        printf("%s\n", pour[i]);
+        resetColor();
+        usleep(250000);
+    }
+    setColor(COLOR_BROWN);
+    printf("☕ Menyeduh kopi hangat...\n\n");
+    resetColor();
+    usleep(500000);
+}
+
+int compareIgnoreCase(const char *a, const char *b) {
+    while (*a && *b) {
+        if (tolower((unsigned char)*a) != tolower((unsigned char)*b)) {
+            return 0;
+        }
+        a++;
+        b++;
+    }
+    return tolower((unsigned char)*a) == tolower((unsigned char)*b);
 }
 
 void insertMenu(char name[], int price) {
     if (heapSize >= MAX) {
-        printf(DARK "Menu penuh. Tidak bisa menambah lagi.\n" RESET);
+        setColor(COLOR_DARK);
+        printf("Menu penuh. Tidak bisa menambah lagi.\n");
+        resetColor();
         return;
     }
     Menu newMenu;
@@ -135,9 +178,64 @@ void insertMenu(char name[], int price) {
     heapSize++;
 }
 
+void inputMenu() {
+    char name[100];
+    int price;
+    char choice;
+
+    do {
+        if (heapSize >= MAX) {
+            setColor(COLOR_DARK);
+            printf("Menu penuh. Tidak bisa menambah lagi.\n");
+            resetColor();
+            return;
+        }
+
+        setColor(COLOR_BROWN);
+        printf("\nMasukkan Nama Menu : ");
+        resetColor();
+        fgets(name, sizeof(name), stdin);
+        name[strcspn(name, "\n")] = 0;
+
+        if (strlen(name) == 0) {
+            setColor(COLOR_DARK);
+            printf("Nama tidak boleh kosong!\n");
+            resetColor();
+            continue;
+        }
+
+        setColor(COLOR_BROWN);
+        printf("Masukkan Harga Menu : ");
+        resetColor();
+        if (scanf("%d", &price) != 1 || price <= 0) {
+            setColor(COLOR_DARK);
+            printf("Harga tidak valid!\n");
+            resetColor();
+            clearInputBuffer();
+            continue;
+        }
+        clearInputBuffer();
+
+        insertMenu(name, price);
+        saveToFile();
+        loadingAnimation("Menyimpan");
+
+        do {
+            setColor(COLOR_BROWN);
+            printf("\nIngin menambah menu lagi? ☕\n(Y untuk lanjut / T untuk kembali)\n: ");
+            resetColor();
+            scanf(" %c", &choice);
+            clearInputBuffer();
+            choice = toupper(choice);
+        } while (choice != 'Y' && choice != 'T');
+
+    } while (choice == 'Y');
+}
+
 void heapifyUp(int index) {
     while (index > 0) {
         int parent = (index - 1) / 2;
+        // Menggunakan Max-Heap berdasarkan harga
         if (heap[parent].price < heap[index].price) {
             swap(&heap[parent], &heap[index]);
             index = parent;
@@ -167,94 +265,227 @@ void swap(Menu *a, Menu *b) {
     *b = temp;
 }
 
+// ==========================================================
+// BAGIAN YANG DIPERBAIKI: Fungsi displayMenu
+// Warna diubah menjadi cokelat dan diterapkan ke seluruh tabel
+// ==========================================================
 void displayMenu() {
-    printf(CREAM "\n--- Daftar Menu Cafe ---\n\n" RESET);
+    // Atur warna menjadi cokelat untuk seluruh blok di bawah ini
+    setColor(COLOR_BROWN);
+
+    printf("\n--- Daftar Menu Cafe ---\n\n");
+
     if (heapSize == 0) {
-        printf(DARK "Belum ada menu yang tersedia.\n" RESET);
+        // Pesan ini bisa menggunakan warna lain jika diinginkan
+        setColor(COLOR_DARK);
+        printf("Belum ada menu yang tersedia.\n");
+        resetColor(); // Reset khusus untuk pesan ini saja
         return;
     }
+
+    // Seluruh tabel ini sekarang akan berwarna cokelat
+    printf("╔═════════════════════════════════════════════╗\n");
+    printf("║         📋 Daftar Menu Cafe SeJIWA          ║\n");
+    printf("╠════╦════════════════════════╦═══════════════╣\n");
+    printf("║ No ║ Nama Menu              ║ Harga         ║\n");
+    printf("╠════╬════════════════════════╬═══════════════╣\n");
+
+    // Karena ini Max-Heap, menu termahal akan di atas.
+    // Jika ingin menampilkan terurut, perlu algoritma sorting terpisah.
+    // Untuk saat ini, kita tampilkan sesuai urutan di array.
     for (int i = 0; i < heapSize; i++) {
-        printf(BROWN "%2d. %-20s - Rp %d\n" RESET, i + 1, heap[i].name, heap[i].price);
+        printf("║ %2d ║ %-22s ║ Rp %-10d ║\n", i + 1, heap[i].name, heap[i].price);
     }
+    printf("╚════╩════════════════════════╩═══════════════╝\n");
+
+    // Kembalikan warna ke default setelah semua selesai dicetak
+    resetColor();
 }
 
+
+// ==========================================================
+// BAGIAN YANG DIPERBAIKI: Fungsi deleteMenu
+// Logika perbaikan heap disederhanakan menjadi lebih benar dan efisien
+// ==========================================================
 void deleteMenu() {
     if (heapSize == 0) {
-        printf(DARK "Tidak ada menu untuk dihapus.\n" RESET);
+        setColor(COLOR_DARK);
+        printf("Tidak ada menu untuk dihapus.\n");
+        resetColor();
         return;
     }
 
-    displayMenu();
     int index;
-    printf(BROWN "\nPilih nomor menu yang ingin dihapus: " RESET);
-    if (scanf("%d", &index) != 1 || index < 1 || index > heapSize) {
-        printf(DARK "Pilihan tidak valid!\n" RESET);
+    char ulang;
+
+    do {
+        clearScreen();
+        loadingAnimation("Memuat Menu");
+        displayMenu();
+        setColor(COLOR_BROWN);
+        printf("\nPilih nomor menu yang ingin dihapus: ");
+        resetColor();
+
+        if (scanf("%d", &index) != 1 || index < 1 || index > heapSize) {
+            clearInputBuffer();
+            setColor(COLOR_DARK);
+            printf("Pilihan tidak valid!\n");
+            resetColor();
+
+            do {
+                setColor(COLOR_BROWN);
+                printf("\nIngin mencoba lagi? ☕\n(Y untuk ulang / T untuk kembali ke menu utama)\n: ");
+                resetColor();
+                scanf(" %c", &ulang);
+                clearInputBuffer();
+                ulang = toupper(ulang);
+            } while (ulang != 'Y' && ulang != 'T');
+
+            if (ulang == 'T') return;
+            continue;
+        }
+
         clearInputBuffer();
-        return;
-    }
-    clearInputBuffer();
+        index--; // Ubah dari 1-based ke 0-based index
 
-    index--;
-    printf(CREAM "\nMenghapus menu: %s - Rp %d\n" RESET, heap[index].name, heap[index].price);
+        setColor(COLOR_CREAM);
+        printf("\nMenghapus menu: %s - Rp %d\n", heap[index].name, heap[index].price);
+        resetColor();
 
-    heap[index] = heap[heapSize - 1];
-    heapSize--;
+        // Pindahkan elemen terakhir ke posisi yang dihapus
+        heap[index] = heap[heapSize - 1];
+        heapSize--;
 
-    for (int i = (heapSize / 2) - 1; i >= 0; i--) {
-        heapifyDown(i);
-    }
+        // [FIX] Cukup panggil heapifyDown pada elemen yang dipindahkan
+        if (heapSize > 0) {
+            heapifyDown(index);
+        }
 
-    loadingAnimation("Menghapus");
+        saveToFile();
+        loadingAnimation("Menghapus");
+
+        do {
+            setColor(COLOR_BROWN);
+            printf("\nIngin menghapus menu lain? ☕\n(Y untuk lanjut / T untuk kembali ke menu utama)\n: ");
+            resetColor();
+            scanf(" %c", &ulang);
+            clearInputBuffer();
+            ulang = toupper(ulang);
+        } while (ulang != 'Y' && ulang != 'T');
+
+    } while (ulang == 'Y');
 }
 
+// ==========================================================
+// BAGIAN YANG DIPERBAIKI: Fungsi updateMenu
+// Memperbaiki bug kritis, validasi, dan logika heap
+// ==========================================================
 void updateMenu() {
     if (heapSize == 0) {
-        printf(DARK "Tidak ada menu untuk diedit.\n" RESET);
+        setColor(COLOR_DARK);
+        printf("Tidak ada menu untuk diedit.\n");
+        resetColor();
         return;
     }
 
-    displayMenu();
     int index;
-    printf(BROWN "\nPilih nomor menu yang ingin diedit: " RESET);
-    if (scanf("%d", &index) != 1 || index < 1 || index > heapSize) {
-        printf(DARK "Pilihan tidak valid!\n" RESET);
+    char ulang;
+
+    do {
+        clearScreen();
+        loadingAnimation("Memuat Menu");
+        displayMenu();
+        setColor(COLOR_BROWN);
+        printf("\nPilih nomor menu yang ingin diedit: ");
+        resetColor();
+
+        if (scanf("%d", &index) != 1 || index < 1 || index > heapSize) {
+            clearInputBuffer();
+            setColor(COLOR_DARK);
+            printf("Pilihan tidak valid!\n");
+            resetColor();
+            // Loop untuk coba lagi
+            do {
+                setColor(COLOR_BROWN);
+                printf("\nIngin mencoba lagi? ☕\n(Y untuk ulang / T untuk kembali ke menu utama)\n: ");
+                resetColor();
+                scanf(" %c", &ulang);
+                clearInputBuffer();
+                ulang = toupper(ulang);
+            } while (ulang != 'Y' && ulang != 'T');
+            if (ulang == 'T') return;
+            continue;
+        }
         clearInputBuffer();
-        return;
-    }
-    clearInputBuffer();
-    index--;
+        index--; // Ubah ke 0-based index
 
-    char name[100];
-    int price;
+        char newName[100];
+        int newPrice;
 
-    printf(BROWN "Nama baru: " RESET);
-    fgets(name, sizeof(name), stdin);
-    name[strcspn(name, "\n")] = 0;
-    if (strlen(name) == 0) {
-        printf(DARK "Nama tidak boleh kosong.\n" RESET);
-        return;
-    }
+        setColor(COLOR_BROWN);
+        printf("Nama baru (sekarang: %s): ", heap[index].name);
+        resetColor();
+        fgets(newName, sizeof(newName), stdin);
+        newName[strcspn(newName, "\n")] = 0;
 
-    printf(BROWN "Harga baru: " RESET);
-    if (scanf("%d", &price) != 1 || price <= 0) {
-        printf(DARK "Harga tidak valid!\n" RESET);
+        if (strlen(newName) == 0) {
+            setColor(COLOR_DARK);
+            printf("Nama tidak boleh kosong. Menggunakan nama lama.\n");
+            strcpy(newName, heap[index].name); // Jika kosong, pakai nama lama
+            resetColor();
+        }
+
+        setColor(COLOR_BROWN);
+        printf("Harga baru (sekarang: %d): ", heap[index].price);
+        resetColor();
+        if (scanf("%d", &newPrice) != 1 || newPrice <= 0) {
+            setColor(COLOR_DARK);
+            printf("Harga tidak valid! Proses update dibatalkan.\n");
+            resetColor();
+            clearInputBuffer();
+            continue; // Kembali ke awal loop do-while update
+        }
         clearInputBuffer();
-        return;
-    }
-    clearInputBuffer();
 
-    strcpy(heap[index].name, name);
-    heap[index].price = price;
+        // [FIX] Simpan harga lama untuk perbandingan
+        int oldPrice = heap[index].price;
 
-    for (int i = (heapSize / 2) - 1; i >= 0; i--) {
-        heapifyDown(i);
-    }
+        // [FIX] Bug kritis: Terapkan perubahan ke array heap
+        strcpy(heap[index].name, newName);
+        heap[index].price = newPrice;
 
-    loadingAnimation("Memperbarui");
+        // [FIX] Gunakan logika heap yang benar untuk update
+        if (newPrice > oldPrice) {
+            heapifyUp(index);
+        } else if (newPrice < oldPrice) {
+            heapifyDown(index);
+        }
+        // Jika harga sama, tidak perlu heapify
+
+        saveToFile();
+        loadingAnimation("Memperbarui");
+        printf("Menu berhasil diperbarui!\n");
+
+        do {
+            setColor(COLOR_BROWN);
+            printf("\nIngin mengedit menu lain? ☕\n(Y untuk lanjut / T untuk kembali ke menu utama)\n: ");
+            resetColor();
+            scanf(" %c", &ulang);
+            clearInputBuffer();
+            ulang = toupper(ulang);
+        } while (ulang != 'Y' && ulang != 'T');
+
+    } while (ulang == 'Y');
 }
 
 void saveToFile() {
     FILE *fp = fopen("menu.txt", "w");
+    if (!fp) {
+        setColor(COLOR_DARK);
+        printf("Gagal menyimpan data ke file.\n");
+        resetColor();
+        return;
+    }
     for (int i = 0; i < heapSize; i++) {
         fprintf(fp, "%s;%d\n", heap[i].name, heap[i].price);
     }
@@ -263,52 +494,45 @@ void saveToFile() {
 
 void loadFromFile() {
     FILE *fp = fopen("menu.txt", "r");
-    if (!fp) return;
+    if (!fp) return; // Jika file belum ada, abaikan
+
+    heapSize = 0; // Reset heap sebelum load
 
     char line[150];
     while (fgets(line, sizeof(line), fp)) {
+        // Hapus newline di akhir jika ada
+        line[strcspn(line, "\n")] = 0;
+        
         char *token = strtok(line, ";");
         char name[100];
-        int price;
+        int price = 0;
 
-        if (token) strcpy(name, token);
-        token = strtok(NULL, ";\n");
-        if (token) price = atoi(token);
-
-        insertMenu(name, price);
+        if (token) {
+            strcpy(name, token);
+            token = strtok(NULL, ";");
+            if (token) {
+                price = atoi(token);
+            }
+        }
+        
+        if (strlen(name) > 0 && price > 0) {
+            // Langsung insert tanpa heapify, lalu build heap di akhir
+            if(heapSize < MAX){
+                strcpy(heap[heapSize].name, name);
+                heap[heapSize].price = price;
+                heapSize++;
+            }
+        }
     }
     fclose(fp);
+    
+    // Build heap dari data yang sudah di-load
+    for(int i = (heapSize / 2) - 1; i >= 0; i--){
+        heapifyDown(i);
+    }
 }
 
 void clearInputBuffer() {
     int c;
     while ((c = getchar()) != '\n' && c != EOF);
-}
-
-void loadingAnimation(const char *msg) {
-    printf(CREAM "%s", msg);
-    fflush(stdout);
-    for (int i = 0; i < 3; i++) {
-        usleep(300000);
-        printf(".");
-        fflush(stdout);
-    }
-    printf("\n" RESET);
-}
-
-void pourCoffeeAnimation() {
-    const char *pour[] = {
-        "     ( (",
-        "      ) )",
-        "    ........",
-        "    |      |]",
-        "    \\      /",
-        "     `----'"
-    };
-    for (int i = 0; i < 6; i++) {
-        printf(CREAM "%s\n" RESET, pour[i]);
-        usleep(250000);
-    }
-    printf(BROWN "☕ Menyeduh kopi hangat...\n\n" RESET);
-    usleep(500000);
 }
